@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// SQLite: store as String — values match Prisma enum names at application layer
+model Reaction {
+  id                 String   @id @default(cuid())
+  reactionType       String
+  track              String   @default("CATALYSIS")
+  name               String
+  description        String?
+  targetYield        Float?
+  createdBy          String
+  createdAt          DateTime @default(now())
+  discoveryCompleted Boolean  @default(false)
+  candidates         Candidate[]
+  experiments        Experiment[]
+}
+
+model Candidate {
+  id                    String   @id @default(cuid())
+  reactionId          String
+  origin               String
+  source               String?
+  name                 String
+  formula              String?
+  smiles               String?
+  description          String?
+  predictedActivity    Float
+  predictedSelectivity Float
+  predictedStability   Float
+  predictedYield       Float
+  confidence           Float
+  reasoning            String
+  propertyRationale    String
+  reaction             Reaction   @relation(fields: [reactionId], references: [id], onDelete: Cascade)
+  experiments          Experiment[]
+
+  @@index([reactionId, predictedActivity])
+}
+
+model Experiment {
+  id                   String    @id @default(cuid())
+  candidateId        String
+  reactionId         String
+  measuredActivity     Float?
+  measuredSelectivity  Float?
+  measuredStability    Float?
+  measuredYield        Float?
+  outcome              String?
+  notes                String?
+  loggedBy             String
+  loggedAt             DateTime  @default(now())
+  candidate            Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  reaction             Reaction  @relation(fields: [reactionId], references: [id], onDelete: Cascade)
+}
+
+model ModelVersion {
+  id                String   @id @default(cuid())
+  versionTag        String
+  trainedAt         DateTime @default(now())
+  experimentsUsed   Int
+  accuracyMetric    Float
+  notes             String?
+  active            Boolean  @default(false)
+}

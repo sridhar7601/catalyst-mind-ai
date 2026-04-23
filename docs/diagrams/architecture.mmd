@@ -1,0 +1,43 @@
+---
+title: Theme 4 — CatalystMind AI Architecture
+---
+flowchart TB
+    subgraph Input["RESEARCHER INPUT"]
+      REACTION["Target Reaction<br/>(CO₂→Methanol · Ethanol→Hydrocarbon<br/>· Biomass→Fuel · custom)"]
+    end
+    subgraph Discovery["CANDIDATE DISCOVERY"]
+      DB_LOOKUP["Known Catalyst Lookup<br/>• Open Catalyst Project<br/>• BRENDA (enzymes)<br/>• Materials Project<br/>• Literature corpus"]
+      GEN_AI["Generative AI Design<br/>(mutation-based novel candidates)"]
+      POOL["Candidate Pool<br/>(known + novel)"]
+    end
+    subgraph Predict["PROPERTY PREDICTION"]
+      ACTIVITY["Activity Predictor"]
+      SELECTIVITY["Selectivity Predictor"]
+      STABILITY["Stability Predictor"]
+      RANK["Ranking Engine<br/>+ rationale strings"]
+    end
+    subgraph UI["WORKBENCH UI"]
+      TABLE["Ranked Candidates Table"]
+      SCATTER["Activity × Selectivity Plot"]
+      VIEWER["3Dmol.js Molecular Viewer"]
+      PATHWAY["Reaction Pathway Diagram"]
+    end
+    subgraph Feedback["EXPERIMENTAL FEEDBACK LOOP"]
+      LOG["Log Measured Values<br/>(activity · selectivity · yield)"]
+      DELTA["Predicted vs Measured<br/>delta + outcome"]
+      RETRAIN["Model Retrain<br/>(accuracy bump + version)"]
+    end
+    REACTION --> DB_LOOKUP & GEN_AI --> POOL --> ACTIVITY & SELECTIVITY & STABILITY --> RANK
+    RANK --> TABLE & SCATTER & VIEWER & PATHWAY
+    VIEWER --> LOG --> DELTA --> RETRAIN
+    RETRAIN -.->|"improved<br/>predictions"| ACTIVITY & SELECTIVITY & STABILITY
+    classDef input fill:#f5f3ff,stroke:#6d28d9,color:#4c1d95
+    classDef disc fill:#8b5cf6,stroke:#6d28d9,color:#fff
+    classDef pred fill:#7c3aed,stroke:#6d28d9,color:#fff
+    classDef ui fill:#ede9fe,stroke:#6d28d9,color:#4c1d95
+    classDef fb fill:#c4b5fd,stroke:#6d28d9,color:#4c1d95
+    class REACTION input
+    class DB_LOOKUP,GEN_AI,POOL disc
+    class ACTIVITY,SELECTIVITY,STABILITY,RANK pred
+    class TABLE,SCATTER,VIEWER,PATHWAY ui
+    class LOG,DELTA,RETRAIN fb
