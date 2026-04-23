@@ -7,10 +7,11 @@ AI-powered molecular discovery for chemical catalysis and synthetic biology — 
 ## Quick start
 
 ```bash
-cd theme4-molecular-discovery
+git clone https://github.com/sridhar7601/catalyst-mind-ai.git
+cd catalyst-mind-ai
 cp .env.example .env
 npm install
-npx prisma migrate deploy   # or: npx prisma migrate dev
+npx prisma migrate deploy
 npm run seed
 npm run dev
 ```
