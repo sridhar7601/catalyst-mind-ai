@@ -4,6 +4,14 @@ AI-powered molecular discovery for chemical catalysis and synthetic biology — 
 
 > **PanIIT AI for Bharat Hackathon** — Theme 4: AI Platform for Molecular Discovery in Chemical Catalysis & Synthetic Biology (sponsor: GPS Renewables)
 
+
+## 🎥 Demo Video
+
+[![CatalystMind AI — 5-min walkthrough](demo/video/poster.jpg)](demo/video/demo.mp4)
+
+> Click the thumbnail above, or [watch directly](demo/video/demo.mp4). Voiceover by ElevenLabs (Jessica, female). 1920×1080.
+> Pipeline (TTS → Chrome headless screen capture → ffmpeg) is reproducible — see [`demo/video/`](demo/video/).
+
 ## Quick start
 
 ```bash
