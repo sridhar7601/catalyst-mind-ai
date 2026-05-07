@@ -21,15 +21,14 @@ export default async function DashboardPage() {
   }))
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-violet-950 dark:text-violet-100">
             Research dashboard
           </h1>
           <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
-            Track reactions, generated catalyst candidates, bench experiments, and mock model accuracy — all
-            deterministic with <code className="rounded bg-muted px-1">USE_MOCK_AI=true</code>.
+            CatalystMind AI — discover, predict, and learn from catalysts and enzymes for sustainable fuels.
           </p>
         </div>
         <Link
@@ -39,6 +38,21 @@ export default async function DashboardPage() {
           New reaction
         </Link>
       </div>
+
+      {d.briefing ? (
+        <div className="rounded-xl border-l-4 border-l-indigo-500 border bg-gradient-to-br from-indigo-50/60 to-white p-5">
+          <div className="mb-2 flex items-center gap-2">
+            <span className="text-sm font-semibold text-indigo-700">AI Research Briefing</span>
+            <span className="rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+              Azure GPT-4.1
+            </span>
+            <span className="ml-auto text-xs text-muted-foreground">
+              {d.novelCandidates} novel · {d.beatPredictions} beat · {d.underperformers} under
+            </span>
+          </div>
+          <p className="whitespace-pre-line text-sm leading-relaxed text-stone-700">{d.briefing}</p>
+        </div>
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[

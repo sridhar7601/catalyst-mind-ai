@@ -444,52 +444,7 @@ export function ReactionWorkbench({ reaction: initial }: { reaction: ReactionPay
         </TabsContent>
 
         <TabsContent value="pathway" className="pt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Reaction energy sketch (static demo)</CardTitle>
-              <CardDescription>
-                Placeholder for future DFT / microkinetic coupling — shows staged free-energy narrative.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <svg viewBox="0 0 640 220" className="w-full max-w-3xl text-foreground">
-                <defs>
-                  <linearGradient id="g" x1="0" x2="1">
-                    <stop offset="0%" stopColor="#7c3aed" />
-                    <stop offset="100%" stopColor="#c4b5fd" />
-                  </linearGradient>
-                </defs>
-                <text x="20" y="24" className="fill-current text-sm font-medium">
-                  CO₂ / biomass oxygenates → intermediates → hydrocarbon product (mock ΔG in eV)
-                </text>
-                {[0, 1, 2, 3].map((i) => {
-                  const x = 80 + i * 160
-                  const heights = [40, 100, 55, 30]
-                  const labels = ["Reactants", "*CO / alkoxide", "C–C coupling", "Products"]
-                  const dg = ["0.0", "+0.45", "+0.62", "−0.18"]
-                  return (
-                    <g key={i}>
-                      <rect x={x} y={160 - heights[i]!} width="100" height={heights[i]!} rx="8" fill="url(#g)" opacity={0.85} />
-                      <text x={x + 8} y={175} className="fill-white text-xs font-medium">
-                        {labels[i]}
-                      </text>
-                      <text x={x + 8} y={200} className="fill-muted-foreground text-[11px]">
-                        ΔG* {dg[i]} eV (mock)
-                      </text>
-                    </g>
-                  )
-                })}
-                <path
-                  d="M 130 120 Q 200 40 270 100 T 420 90 T 520 130"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeDasharray="4 3"
-                  className="text-violet-500"
-                />
-              </svg>
-            </CardContent>
-          </Card>
+          <PathwayPanel reactionId={reaction.id} reactionName={reaction.name} />
         </TabsContent>
       </Tabs>
 
@@ -585,4 +540,141 @@ function OutcomeBadge({ o }: { o: string }) {
     INCONCLUSIVE: "outline",
   }
   return <Badge variant={map[o] ?? "outline"}>{o.replace(/_/g, " ")}</Badge>
+}
+
+// ─── AI-driven reaction pathway viewer ──────────────────────────────────────
+type PathwayStep = { label: string; deltaG: number; kind: "reactant" | "intermediate" | "ts" | "product" }
+type PathwayResp = {
+  reactionName: string
+  track: string
+  ai_description: string
+  pathway_steps: PathwayStep[]
+  top_candidates: { name: string; formula: string; predictedActivity: number }[]
+}
+
+function PathwayPanel({ reactionId, reactionName }: { reactionId: string; reactionName: string }) {
+  const [data, setData] = useState<PathwayResp | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let abort = false
+    setLoading(true)
+    fetch(`/api/reactions/${reactionId}/pathway`)
+      .then((r) => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
+      .then((j) => { if (!abort) setData(j) })
+      .catch((e) => { if (!abort) setError(e.message) })
+      .finally(() => { if (!abort) setLoading(false) })
+    return () => { abort = true }
+  }, [reactionId])
+
+  if (loading) return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Reaction pathway</CardTitle>
+        <CardDescription>Loading AI narration…</CardDescription>
+      </CardHeader>
+      <CardContent className="flex items-center gap-2 text-muted-foreground text-sm">
+        <Loader2 className="h-4 w-4 animate-spin" /> Fetching from Azure GPT-4.1…
+      </CardContent>
+    </Card>
+  )
+  if (error || !data) return (
+    <Card>
+      <CardHeader><CardTitle>Reaction pathway</CardTitle></CardHeader>
+      <CardContent className="text-sm text-red-600">{error ?? "Unable to load pathway"}</CardContent>
+    </Card>
+  )
+
+  // Plot energy diagram
+  const minG = Math.min(...data.pathway_steps.map((s) => s.deltaG), 0)
+  const maxG = Math.max(...data.pathway_steps.map((s) => s.deltaG), 0)
+  const range = Math.max(1, maxG - minG)
+  const W = 720
+  const H = 220
+  const stepW = W / (data.pathway_steps.length + 1)
+  const points = data.pathway_steps.map((s, i) => {
+    const x = stepW * (i + 1)
+    const y = H - 40 - ((s.deltaG - minG) / range) * (H - 80)
+    return { x, y, ...s }
+  })
+
+  const pathD = points.length > 1
+    ? points.map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`)).join(" ")
+    : ""
+
+  return (
+    <div className="space-y-4">
+      {/* AI narration card */}
+      <div className="rounded-xl border-l-4 border-l-indigo-500 border bg-gradient-to-br from-indigo-50/60 to-white p-5">
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-sm font-semibold text-indigo-700">AI Mechanism Description</span>
+          <span className="rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+            Azure GPT-4.1
+          </span>
+        </div>
+        <p className="text-sm leading-relaxed text-stone-700">{data.ai_description}</p>
+        {data.top_candidates?.length > 0 && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Top candidates referenced:
+            {data.top_candidates.map((c) => (
+              <span key={c.name} className="ml-1 rounded bg-indigo-100 px-1.5 py-0.5 font-mono">
+                {c.name}
+              </span>
+            ))}
+          </p>
+        )}
+      </div>
+
+      {/* Energy diagram */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Free-energy profile</CardTitle>
+          <CardDescription>
+            {data.track === "SYNTHETIC_BIOLOGY"
+              ? "Enzyme catalysis cycle (ΔG in kJ/mol, illustrative)"
+              : "Heterogeneous catalysis cycle (ΔG in kJ/mol, illustrative)"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <svg viewBox={`0 0 ${W} ${H}`} className="w-full max-w-3xl">
+            <defs>
+              <linearGradient id="pathGrad" x1="0" x2="1">
+                <stop offset="0%" stopColor="#4f46e5" />
+                <stop offset="100%" stopColor="#a78bfa" />
+              </linearGradient>
+            </defs>
+            {pathD && (
+              <path d={pathD} fill="none" stroke="url(#pathGrad)" strokeWidth="3" strokeLinecap="round" />
+            )}
+            {points.map((p, i) => {
+              const fill = p.kind === "ts" ? "#dc2626" : p.kind === "product" ? "#059669" : p.kind === "reactant" ? "#0f172a" : "#4f46e5"
+              return (
+                <g key={i}>
+                  <circle cx={p.x} cy={p.y} r="7" fill={fill} stroke="white" strokeWidth="2" />
+                  <text x={p.x} y={p.y - 14} textAnchor="middle" className="fill-stone-900 text-[11px] font-semibold">
+                    {p.label}
+                  </text>
+                  <text x={p.x} y={H - 18} textAnchor="middle" className="fill-stone-500 text-[10px]">
+                    ΔG {p.deltaG > 0 ? "+" : ""}{p.deltaG} kJ/mol
+                  </text>
+                </g>
+              )
+            })}
+          </svg>
+          <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
+            <span><span className="inline-block w-2 h-2 rounded-full bg-stone-900 mr-1"/>Reactant</span>
+            <span><span className="inline-block w-2 h-2 rounded-full bg-indigo-600 mr-1"/>Intermediate</span>
+            <span><span className="inline-block w-2 h-2 rounded-full bg-red-600 mr-1"/>Transition state</span>
+            <span><span className="inline-block w-2 h-2 rounded-full bg-emerald-600 mr-1"/>Product</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      <p className="text-xs text-muted-foreground">
+        Energy values are illustrative. Round 2 swaps the heuristic for DFT / microkinetic models grounded in
+        the candidate&apos;s actual electronic structure (catalysis) or substrate–enzyme docking pose (biology).
+      </p>
+    </div>
+  )
 }

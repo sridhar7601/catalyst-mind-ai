@@ -15,6 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { MoleculeViewer } from "@/components/molecule-viewer"
 import { resolveDemoSmiles } from "@/lib/molecular"
+import { explainCandidate } from "@/lib/llm-narration"
 
 export const dynamic = "force-dynamic"
 
@@ -23,7 +24,7 @@ export default async function CandidatePage({ params }: { params: Promise<{ id: 
   const c = await prisma.candidate.findUnique({
     where: { id },
     include: {
-      reaction: { select: { id: true, name: true } },
+      reaction: { select: { id: true, name: true, reactionType: true } },
       experiments: { orderBy: { loggedAt: "desc" } },
     },
   })
@@ -37,6 +38,20 @@ export default async function CandidatePage({ params }: { params: Promise<{ id: 
   }
 
   const smiles = resolveDemoSmiles(c.formula ?? "", c.smiles)
+
+  const aiRationale = await explainCandidate({
+    reactionType: c.reaction.reactionType,
+    reactionName: c.reaction.name,
+    candidateName: c.name,
+    formula: c.formula ?? "",
+    origin: c.origin,
+    source: c.source ?? undefined,
+    predictedActivity: c.predictedActivity,
+    predictedSelectivity: c.predictedSelectivity,
+    predictedStability: c.predictedStability,
+    predictedYield: c.predictedYield,
+    confidence: c.confidence,
+  })
 
   return (
     <div className="space-y-8">
@@ -57,6 +72,19 @@ export default async function CandidatePage({ params }: { params: Promise<{ id: 
         <p className="text-muted-foreground text-sm">
           {c.reaction.name} · <OriginBadge origin={c.origin} />
         </p>
+      </div>
+
+      <div className="rounded-xl border-l-4 border-l-indigo-500 border bg-gradient-to-br from-indigo-50/60 to-white p-5">
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-sm font-semibold text-indigo-700">AI Rationale</span>
+          <span className="rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+            Azure GPT-4.1
+          </span>
+          <span className="ml-auto text-xs text-muted-foreground">
+            confidence {(c.confidence * 100).toFixed(0)}%
+          </span>
+        </div>
+        <p className="text-sm leading-relaxed text-stone-700">{aiRationale}</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
